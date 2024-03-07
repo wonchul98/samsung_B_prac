@@ -3,6 +3,7 @@ package swea_b;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -129,7 +130,7 @@ class UserSolution {
 		Channel curChannel;
 		if(chIdToCh.containsKey(ChannelId)) curChannel = chIdToCh.get(ChannelId);
 		else {
-			curChannel = new Channel();
+			curChannel = new Channel(ChannelId);
 			chIdToCh.put(ChannelId, curChannel);
 		}
 		return curChannel;
@@ -147,7 +148,7 @@ class UserSolution {
 		User user;
 		if(userIdToUser.containsKey(mUID)) user = userIdToUser.get(mUID);
 		else {
-			user = new User();
+			user = new User(mUID);
 			userIdToUser.put(mUID, user);
 		}
 		return user;
@@ -163,9 +164,10 @@ class UserSolution {
 
 	void registerUser(int mTime, int mUID, int mNum, int mChannelIDs[])
 	{
+		getSomeNews(mTime);
 		User user = getUser(mUID);
 		for(int i = 0;i < mNum;i++) {
-			chIdToCh.get(mChannelIDs[i]).userList.add(user);
+			getChannel(mChannelIDs[i]).userList.add(user);
 		}
 	}
 
@@ -182,43 +184,60 @@ class UserSolution {
 			curChannel.timeNews.put(mTime+mDelay ,list);
 		}
 		pq.add(new Pair(mTime + mDelay, curChannel));
-		
+		System.out.println(curChannel.userList.size());
 		return curChannel.userList.size();
 	}
-	void getNews(int mTime) {
-		while(!pq.isEmpty() && pq.peek().time <= mTime) {
-			Pair p = pq.poll();
-			Channel channel = p.ch;
-			ArrayList<News> newsList = channel.timeNews.get(p.time);
-			Collections.sort(newsList); // 뉴스 아이디 오름차순으로 정렬 -> 작은게 먼저 들어가면 큰게 나중에 들어가서 최신 뉴스가 삽입됨
-			for(News n : newsList) {
-				for(User u : channel.userList) {
-					u.curNews.addFirst(n);
-				}
-			}
-		}
+	void getSomeNews(int mTime) {
+	    ArrayList<NewsEvent> events = new ArrayList<>();
+	    
+	    while (!pq.isEmpty() && pq.peek().time <= mTime) {
+	        Pair p = pq.poll();
+	        Channel channel = p.ch;
+	        for (News n : channel.timeNews.get(p.time)) {
+	            for (User u : channel.userList) {
+	                events.add(new NewsEvent(p.time, n, u));
+	            }
+	        }
+	    }
+
+	    Collections.sort(events);
+
+	    for (NewsEvent event : events) {
+	    	event.user.curNews.addFirst(event.news);
+	    }
 	}
+
 
 	void cancelNews(int mTime, int mNewsID)
 	{
 		newsIdToNews.get(mNewsID).isDeleted = true;
 	}
 
-	int checkUser(int mTime, int mUID, int mRetIDs[])
-	{
-		getUser(mTime);
-		User user = getUser(mUID);
-		int cnt = 0;
-		for(News n :user.curNews) {
-			if(n.isDeleted==true) continue;
-			if(cnt < 3) {
-				mRetIDs[cnt] = n.newsId;
-			}
-			cnt++;
-			
-		}
-		return cnt;
+	int checkUser(int mTime, int mUID, int mRetIDs[]) {
+	    getSomeNews(mTime);
+	    User user = getUser(mUID);
+
+	    ArrayList<Integer> retIDsList = new ArrayList<>();
+	    int cnt = 0;
+	    for (News n : user.curNews) {
+	        if (n.isDeleted) continue; 
+	        if (retIDsList.size() < 3) {
+	            retIDsList.add(n.newsId); 
+	        }
+	        cnt++;
+	    }
+
+	    user.curNews = new LinkedList<>();
+
+	    mRetIDs = new int[retIDsList.size()];
+	    for (int i = 0; i < retIDsList.size(); i++) {
+	        mRetIDs[i] = retIDsList.get(i);
+	    }
+	    System.out.println(cnt);
+	    System.out.println(Arrays.toString(mRetIDs));
+	    return cnt;
 	}
+
 	class Pair implements Comparable<Pair>{
 		int time;
 		Channel ch;
@@ -231,7 +250,13 @@ class UserSolution {
 		@Override
 		public int compareTo(Pair o) {
 			return this.time - o.time;
+		}
+
+		@Override
+		public String toString() {
+			return "Pair [time=" + time + ", ch=" + ch + "]";
 		}	
+		
 	}
 	class News implements Comparable<News>{
 		int mTime, mDelay, newsId;
@@ -247,19 +272,60 @@ class UserSolution {
 		public int compareTo(News o){
 			return this.newsId - o.newsId;
 		}
+		@Override
+		public String toString() {
+			return "News [newsId=" + newsId + ", isDeleted=" + isDeleted
+					+ "]";
+		}
+		
 	}
 	class Channel{
+		int ChId;
 		HashMap<Integer, ArrayList<News>> timeNews; //시간 , 해당 시간 뉴스 Id 리스트
 		ArrayList<User> userList;
-		public Channel() {
+		public Channel(int chId) {
+			this.ChId = chId;
 			this.timeNews = new HashMap<>();
 			this.userList = new ArrayList<>();
 		}
+		@Override
+		public String toString() {
+			return "Channel [ChannelID=" + ChId + "]";
+		}
+		
 	}
 	class User{
+		int userId;
 		Deque<News> curNews; //최근 읽은 신문
-		public User() {
+		public User(int userId) {
+			this.userId = userId;
 			this.curNews = new LinkedList<>();
 		}
+		@Override
+		public String toString() {
+			return "User [userID=" + userId + "]";
+		}
+		
 	}
+	class NewsEvent implements Comparable<NewsEvent> {
+	    int time;
+	    News news;
+	    User user;
+
+	    NewsEvent(int time, News news, User user) {
+	        this.time = time;
+	        this.news = news;
+	        this.user = user;
+	    }
+
+	    @Override
+	    public int compareTo(NewsEvent other) {
+	        if (this.time != other.time) {
+	            return this.time - other.time;
+	        } else {
+	            return this.news.newsId - other.news.newsId;
+	        }
+	    }
+	}
+
 }
