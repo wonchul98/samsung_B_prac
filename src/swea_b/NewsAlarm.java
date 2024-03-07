@@ -3,10 +3,10 @@ package swea_b;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
@@ -119,84 +119,147 @@ class Solution {
 }
 
 class UserSolution {
-	public static HashMap<Integer, Integer> chIdToChIdx;
-	public static HashMap<Integer, Integer> newsIdToChId; 
-	public static PriorityQueue<Pair> pq;
-	public static HashMap<Integer, News> newsIdToNews;
-	public static Channel[] channels;
-	public static int chIdx = 0;
+	HashMap<Integer, Channel> chIdToCh;
+	HashMap<Integer, Channel> newsIdToCh; 
+	HashMap<Integer, News> newsIdToNews;
+	HashMap<Integer, User> userIdToUser;
+	PriorityQueue<Pair> pq;
+	
+	Channel getChannel(int ChannelId) {
+		Channel curChannel;
+		if(chIdToCh.containsKey(ChannelId)) curChannel = chIdToCh.get(ChannelId);
+		else {
+			curChannel = new Channel();
+			chIdToCh.put(ChannelId, curChannel);
+		}
+		return curChannel;
+	}
+	News getNews(int mTime, int mNewsID, int mDelay, int mChannelID) {
+		News news;
+		if(newsIdToNews.containsKey(mNewsID)) news = newsIdToNews.get(mNewsID);
+		else {
+			news = new News(mTime, mDelay, mNewsID);
+			newsIdToNews.put(mNewsID, news);
+		}
+		return news;
+	}
+	User getUser(int mUID) {
+		User user;
+		if(userIdToUser.containsKey(mUID)) user = userIdToUser.get(mUID);
+		else {
+			user = new User();
+			userIdToUser.put(mUID, user);
+		}
+		return user;
+	}
 	void init(int N, int K)
 	{
-		chIdToChIdx = new HashMap<>(); //채널ID -> 채널 IDX;
-		newsIdToChId = new HashMap<>(); // 뉴스 아이디 -> 채널 id 저장
-		newsIdToNews = new HashMap<>();
+		chIdToCh = new HashMap<>(); //채널ID -> 채널
+		newsIdToNews = new HashMap<>(); //뉴스ID -> 뉴스
+		userIdToUser = new HashMap<>(); //유저ID -> 유저
+		newsIdToCh = new HashMap<>(); // 뉴스 아이디 -> 채널 id 저장
 		pq = new PriorityQueue<>();
-		channels = new Channel[K];
 	}
 
 	void registerUser(int mTime, int mUID, int mNum, int mChannelIDs[])
 	{
-		
+		User user = getUser(mUID);
+		for(int i = 0;i < mNum;i++) {
+			chIdToCh.get(mChannelIDs[i]).userList.add(user);
+		}
 	}
 
 	int offerNews(int mTime, int mNewsID, int mDelay, int mChannelID)
 	{
-		return -1;
+		Channel curChannel = getChannel(mChannelID);
+		News news = getNews(mTime,mNewsID, mDelay, mChannelID);
+		newsIdToCh.put(mNewsID, curChannel);
+		if(curChannel.timeNews.containsKey(mTime + mDelay)) {
+			curChannel.timeNews.get(mTime+mDelay).add(news); // 이미 해당 시간에 추가할 뉴스 리스트 들이 있는 경우
+		}else {
+			ArrayList<News> list = new ArrayList<>();
+			list.add(news);
+			curChannel.timeNews.put(mTime+mDelay ,list);
+		}
+		pq.add(new Pair(mTime + mDelay, curChannel));
+		
+		return curChannel.userList.size();
+	}
+	void getNews(int mTime) {
+		while(!pq.isEmpty() && pq.peek().time <= mTime) {
+			Pair p = pq.poll();
+			Channel channel = p.ch;
+			ArrayList<News> newsList = channel.timeNews.get(p.time);
+			Collections.sort(newsList); // 뉴스 아이디 오름차순으로 정렬 -> 작은게 먼저 들어가면 큰게 나중에 들어가서 최신 뉴스가 삽입됨
+			for(News n : newsList) {
+				for(User u : channel.userList) {
+					u.curNews.addFirst(n);
+				}
+			}
+		}
 	}
 
 	void cancelNews(int mTime, int mNewsID)
 	{
+		newsIdToNews.get(mNewsID).isDeleted = true;
 	}
 
 	int checkUser(int mTime, int mUID, int mRetIDs[])
 	{
-		return -1;
+		getUser(mTime);
+		User user = getUser(mUID);
+		int cnt = 0;
+		for(News n :user.curNews) {
+			if(n.isDeleted==true) continue;
+			if(cnt < 3) {
+				mRetIDs[cnt] = n.newsId;
+			}
+			cnt++;
+			
+		}
+		return cnt;
 	}
-	public static class Pair implements Comparable<Pair>{
-		int x, y;
+	class Pair implements Comparable<Pair>{
+		int time;
+		Channel ch;
 
-		public Pair(int x, int y) {
-			this.x = x;
-			this.y = y;
+		public Pair(int time, Channel ch) {
+			this.time = time;
+			this.ch = ch;
 		}
 
 		@Override
 		public int compareTo(Pair o) {
-			return this.x - o.y;
-		}
-		
+			return this.time - o.time;
+		}	
 	}
-	public static class News{
-		int mTime, mNewsId, mDelay, mChannel;
+	class News implements Comparable<News>{
+		int mTime, mDelay, newsId;
 		boolean isDeleted;
 
-		public News(int mTime, int mNewsId, int mDelay, int mChannel, boolean isDeleted) {
+		public News(int mTime, int mDelay, int newsId) {
 			this.mTime = mTime;
-			this.mNewsId = mNewsId;
 			this.mDelay = mDelay;
-			this.mChannel = mChannel;
-			this.isDeleted = isDeleted;
+			this.newsId = newsId;
+			this.isDeleted = false;
+		}
+		@Override
+		public int compareTo(News o){
+			return this.newsId - o.newsId;
 		}
 	}
-	public static class Channel{
-		HashMap<Integer, List<Integer>> timeNews = new HashMap<>(); //시간 , 해당 시간 뉴스 Id 리스트
-		ArrayList<User> list = new ArrayList<>();
-		public Channel(HashMap<Integer, List<Integer>> timeNews, ArrayList<User> list) {
-			this.timeNews = timeNews;
-			this.list = list;
+	class Channel{
+		HashMap<Integer, ArrayList<News>> timeNews; //시간 , 해당 시간 뉴스 Id 리스트
+		ArrayList<User> userList;
+		public Channel() {
+			this.timeNews = new HashMap<>();
+			this.userList = new ArrayList<>();
 		}
-		
 	}
-	public static class User{
-		ArrayList<Integer> channelIdList;
-		Deque<Integer> curNewsId = new LinkedList<>(); //최근 읽은 신문
-		int totalCnt; //총 알람 수 
-		public User(ArrayList<Integer> channelIdList, Deque<Integer> curNewsId, int totalCnt) {
-			super();
-			this.channelIdList = channelIdList;
-			this.curNewsId = curNewsId;
-			this.totalCnt = totalCnt;
+	class User{
+		Deque<News> curNews; //최근 읽은 신문
+		public User() {
+			this.curNews = new LinkedList<>();
 		}
-		
 	}
 }
