@@ -36,7 +36,8 @@ class Solution {
         boolean ok = false;
 
         for (int i = 0; i < Q; i++) {
-            st = new StringTokenizer(br.readLine(), " ");
+        	String Input = br.readLine();
+            st = new StringTokenizer(Input, " ");
             cmd = Integer.parseInt(st.nextToken());
 
             if (cmd == INIT) {
@@ -86,6 +87,9 @@ class Solution {
 				}
 				if (ans != ret) {
 					ok = false;
+					System.out.println("ans: " + ans);
+					System.out.println("ret: " + ret);
+					System.out.println(Input);
 				}
 				else {
 					for (int m = 0; m < num; m++) {
@@ -97,6 +101,7 @@ class Solution {
             }
 			else ok = false;
         }
+        
         return ok;
     }
 
@@ -173,7 +178,7 @@ class UserSolution {
 
 	int offerNews(int mTime, int mNewsID, int mDelay, int mChannelID)
 	{
-		Channel curChannel = getChannel(mChannelID);
+		Channel curChannel = chIdToCh.get(mChannelID); //유저가 하나 이상인 채널(이미 등록된 채널)임이 보장
 		News news = getNews(mTime,mNewsID, mDelay, mChannelID);
 		newsIdToCh.put(mNewsID, curChannel);
 		if(curChannel.timeNews.containsKey(mTime + mDelay)) {
@@ -184,7 +189,7 @@ class UserSolution {
 			curChannel.timeNews.put(mTime+mDelay ,list);
 		}
 		pq.add(new Pair(mTime + mDelay, curChannel));
-		System.out.println(curChannel.userList.size());
+		//System.out.println(curChannel.userList.size());
 		return curChannel.userList.size();
 	}
 	void getSomeNews(int mTime) {
@@ -194,6 +199,7 @@ class UserSolution {
 	        Pair p = pq.poll();
 	        Channel channel = p.ch;
 	        for (News n : channel.timeNews.get(p.time)) {
+	        	//if(n.isDeleted) continue;
 	            for (User u : channel.userList) {
 	                events.add(new NewsEvent(p.time, n, u));
 	            }
@@ -201,7 +207,6 @@ class UserSolution {
 	    }
 
 	    Collections.sort(events);
-
 	    for (NewsEvent event : events) {
 	    	event.user.curNews.addFirst(event.news);
 	    }
@@ -214,27 +219,19 @@ class UserSolution {
 	}
 
 	int checkUser(int mTime, int mUID, int mRetIDs[]) {
-	    getSomeNews(mTime);
-	    User user = getUser(mUID);
-
-	    ArrayList<Integer> retIDsList = new ArrayList<>();
+	    getSomeNews(mTime); //알람 받기
+	    User user = getUser(mUID); //등록이 보장됨
 	    int cnt = 0;
+	    HashMap<Integer,Integer> hm = new HashMap<>();
 	    for (News n : user.curNews) {
-	        if (n.isDeleted) continue; 
-	        if (retIDsList.size() < 3) {
-	            retIDsList.add(n.newsId); 
+	    	if (n.isDeleted || hm.containsKey(n.newsId)) continue; 
+	    	hm.put(n.newsId, 1);
+	        if (cnt < 3) {
+	        	mRetIDs[cnt] = n.newsId;
 	        }
 	        cnt++;
 	    }
-
-	    user.curNews = new LinkedList<>();
-
-	    mRetIDs = new int[retIDsList.size()];
-	    for (int i = 0; i < retIDsList.size(); i++) {
-	        mRetIDs[i] = retIDsList.get(i);
-	    }
-	    System.out.println(cnt);
-	    System.out.println(Arrays.toString(mRetIDs));
+	    user.curNews = new LinkedList<>(); //알람 모두 삭제
 	    return cnt;
 	}
 
@@ -320,12 +317,18 @@ class UserSolution {
 
 	    @Override
 	    public int compareTo(NewsEvent other) {
-	        if (this.time != other.time) {
+	        if (this.time != other.time) { //시간 같으면 뉴스 ID순 오름차순
 	            return this.time - other.time;
-	        } else {
-	            return this.news.newsId - other.news.newsId;
-	        }
+	        } //시간 순 오름차순
+	        return this.news.newsId - other.news.newsId;
+
 	    }
+
+		@Override
+		public String toString() {
+			return "NewsEvent [time=" + time + ", news=" + news + ", user=" + user + "]";
+		}
+	    
 	}
 
 }
