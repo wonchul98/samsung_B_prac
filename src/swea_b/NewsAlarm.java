@@ -11,7 +11,9 @@ import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
-class Solution {
+import ScoreCheck.UserSolution;
+
+class NewsAlarm {
     private static BufferedReader br;
     private static UserSolution usersolution = new UserSolution();
 	
