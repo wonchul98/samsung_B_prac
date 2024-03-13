@@ -64,8 +64,11 @@ class Solution
 				okay = false;
 				break;
 			}
+			if(!okay) {
+				System.out.println("WRONG " + cmd);
+				break;
+			}
 		}
-
 		return okay;
 	}
 	
