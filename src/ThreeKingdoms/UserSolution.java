@@ -8,6 +8,7 @@ class UserSolution {
 	public String[][] map;
 	HashMap<Integer, Country> hm;
 	HashMap<String, Integer> nameToIdx;
+	int idx = 1;
 	int[] p;
 	int[] dx = {-1,-1,-1,0,0,1,1,1};
 	int[] dy = {-1,0,1,-1,1,-1,0,1};
@@ -18,6 +19,7 @@ class UserSolution {
 	
     void init(int N, int mSoldier[][], char mMonarch[][][])
     {
+    	idx++;
     	p = new int[N*N];
     	bound = N;
     	map = new String[N][N];
@@ -37,7 +39,14 @@ class UserSolution {
     void union(int a, int b) {
     	int pa = find(a);
     	int pb = find(b);
+    	System.out.println("union " + hm.get(pa).monarch + " " + hm.get(pb).monarch);
     	p[pa] = pb;
+    	if (hm.get(pa).hostiles.size()!=0) {
+    		for(Country h : hm.get(pa).hostiles) {
+    			hm.get(pb).hostiles.add(h);
+    		}
+    	}
+    	System.out.println("host: " + hm.get(pb).hostiles.toString());
     }
     int find(int a) {
     	if(p[a] == a) {
@@ -51,14 +60,19 @@ class UserSolution {
     }
     int ally(char mMonarchA[], char mMonarchB[])
     {
-    	System.out.println("ally");
+    	System.out.println("###idx: " + idx++);
+    	System.out.println("ally " + new String(mMonarchA) + " " + new String(mMonarchB));
     	Country a = hm.get(nameToIdx.get(new String(mMonarchA)));
     	Country b = hm.get(nameToIdx.get(new String(mMonarchB)));
+    	Country pa = hm.get(find(a.idx));
+    	Country pb = hm.get(find(b.idx));
+    	System.out.println("pa host: " + pa.hostiles.toString());
+    	System.out.println("pb: " + pb);
     	if(find(a.idx) == find(b.idx)) {
     		System.out.println("-1");
     		return -1;
     	}
-    	else if(hm.get(find(a.idx)).hostiles.contains(b)) {
+    	else if(hm.get(find(a.idx)).hostiles.contains(pb)) {
     		System.out.println("-2");
     		return -2;
     	}
@@ -70,6 +84,7 @@ class UserSolution {
     }
     int attack(char mMonarchA[], char mMonarchB[], char mGeneral[])
     {
+    	System.out.println("###idx: " + idx++);
     	System.out.println("attack");
     	Country a = hm.get(nameToIdx.get(new String(mMonarchA)));
     	Country b = hm.get(nameToIdx.get(new String(mMonarchB)));
@@ -147,6 +162,7 @@ class UserSolution {
     }
     int recruit(char mMonarch[], int mNum, int mOption)
     {
+    	System.out.println("###idx: " + idx++);
     	System.out.println("recruit");
     	if(mOption == 0) {
     		hm.get(nameToIdx.get(new String(mMonarch))).soldiers += mNum;
